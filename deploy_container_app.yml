@@ -1,0 +1,58 @@
+---
+- name: "Playbook to deploy an application to a running Azure container."
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    resource_group_name: "test-resource-group"
+    app_service_name: "simple-ansiblefest2021-app-service"
+    app_service_plan_sku: "B1"
+    app_tags:
+      LastUpdated: "{{ ansible_date_time.date }}"
+      Deletable: "true"
+    az_tenant_id: "override at runtime"
+    az_location: "southcentralus"
+
+  tasks:
+    - name: "Create resource group for application."
+      azure.azcollection.azure_rm_resourcegroup:
+        name: "{{ resource_group_name }}"
+        location: "{{ az_location }}"
+        append_tags: false
+        tags: "{{ app_tags }}"
+      register: rg_info
+
+    - name: "Assign access to group."
+      include_tasks: tasks/assign_permission.yml
+      vars:
+        group_name: "Test Security Group"
+        role_name: "Contributor"
+        resource_id: "{{ rg_info.state.id }}"
+
+    - name: "Create app service plan."
+      azure.azcollection.azure_rm_appserviceplan:
+        name: "{{ app_service_name }}-plan"
+        resource_group: "{{ resource_group_name }}"
+        is_linux: true
+        sku: "{{ app_service_plan_sku }}"
+        location: "{{ az_location }}"
+        append_tags: false
+        tags: "{{ app_tags }}"
+
+    - name: "Deploy application from image."
+      azure.azcollection.azure_rm_webapp:
+        name: "{{ app_service_name }}"
+        plan: "{{ app_service_name }}-plan"
+        resource_group: "{{ resource_group_name }}"
+        container_settings:
+          name: "mcr.microsoft.com/appsvc/staticsite:latest"
+        purge_app_settings: true
+        app_state: restarted
+        https_only: true
+        location: "{{ az_location }}"
+        append_tags: false
+        tags: "{{ app_tags }}"
+
+    - name: "Display new url."
+      debug:
+        msg: "Application is now available at https://{{ app_service_name }}.azurewebsites.net/"

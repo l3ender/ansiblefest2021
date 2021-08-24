@@ -1,0 +1,9 @@
+---
+collections:
+  - name: collections/azure-azcollection-1.8.1.tar.gz
+    # installing local collection bundle until following PRs are included in the next release:
+      # https://github.com/ansible-collections/azure/pull/450
+      # https://github.com/ansible-collections/azure/pull/452
+      # https://github.com/ansible-collections/azure/pull/590
+      # https://github.com/ansible-collections/azure/pull/594
+    type: file

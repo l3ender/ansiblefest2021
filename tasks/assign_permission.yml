@@ -1,0 +1,38 @@
+---
+- name: "Ensure resource ID has subscription."
+  debug:
+    msg: "provided resource_id: {{ resource_id }}"
+  failed_when: resource_id is not match("/subscriptions/[\w-]+/.*")
+
+- name: "Set subscription from resource ID."
+  set_fact:
+    subscription_id: "{{ resource_id | regex_replace('^(/subscriptions/[\\w-]+)/.*', '\\1') }}"
+
+- name: "Get role definition."
+  azure.azcollection.azure_rm_roledefinition_info:
+    scope: "{{ subscription_id }}"
+    role_name: "{{ role_name }}"
+  register: role_info
+  failed_when: role_info.roledefinitions is defined and role_info.roledefinitions | length != 1
+
+- name: "Get group info."
+  azure.azcollection.azure_rm_adgroup_info:
+    tenant: "{{ az_tenant_id }}"
+    attribute_name: "displayName"
+    attribute_value: "{{ group_name }}"
+  register: group_info
+  failed_when: group_info.ad_groups | length != 1
+
+- name: "Display assignment detail."
+  debug:
+    msg: >-
+      Assigning role={{ role_name }} (id={{ role_info.roledefinitions[0].id }})
+      for group={{ group_name }} (id={{ group_info.ad_groups[0].object_id }})
+      to resource={{ resource_id }}
+
+- name: "Assign role."
+  azure.azcollection.azure_rm_roleassignment:
+    role_definition_id: "{{ role_info.roledefinitions[0].id }}"
+    assignee_object_id: "{{ group_info.ad_groups[0].object_id }}"
+    scope: "{{ resource_id }}"
+  register: role_info
