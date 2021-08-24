@@ -1,0 +1,20 @@
+---
+- name: "Playbook to configure an application running in Azure."
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    app_service_name: "simple-ansiblefest2021-app-service"
+    resource_group_name: "test-resource-group"
+
+  tasks:
+    - name: "Configure webapp network access restrictions"
+      azure.azcollection.azure_rm_webappaccessrestriction:
+        name: "{{ app_service_name }}"
+        resource_group: "{{ resource_group_name }}"
+        ip_security_restrictions:
+          - name: "Datacenter 1"
+            action: "Allow"
+            ip_address: "1.2.3.4/24"
+            priority: 1
+        scm_ip_security_restrictions_use_main: true

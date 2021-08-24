@@ -7,6 +7,7 @@ This repo houses Ansible playbooks used the AnsibleFest 2021 session on Azure ap
 Plays can be run as follows:
 ```bash
 ansible-playbook deploy_container_app.yml --e "az_tenant_id=xxx"
+ansible-playbook configure_container_app.yml
 ansible-playbook delete_stale_environments.yml -v
 ```
 
@@ -26,7 +27,7 @@ You have two options for authentication: using your Azure AD user or setting up 
 
 Configure the following environment variables. If you want the variables the persist for every session, place the following in your `~/.bashrc` file. Otherwise you can run them as commands and they will take effect only for the current shell session.
 ```bash
-export AZURE_AD_USER="xxx@rbfcu.org"
+export AZURE_AD_USER="xxx@xxx.xxx"
 export AZURE_PASSWORD="your pass"
 export AZURE_SUBSCRIPTION_ID="find in azure portal or use output of 'az account show' to find id"
 ```
