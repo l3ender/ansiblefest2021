@@ -7,6 +7,7 @@ This repo houses Ansible playbooks used the AnsibleFest 2021 session on Azure ap
 Plays can be run as follows:
 ```bash
 ansible-playbook deploy_container_app.yml --e "az_tenant_id=xxx"
+ansible-playbook delete_stale_environments.yml -v
 ```
 
 ## Setup

@@ -1,0 +1,24 @@
+---
+- name: "Deletes environments which have not been updated in X days."
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    date_fmt: "%Y-%m-%d"
+    environment_days_to_preserve: 7
+
+  tasks:
+    - name: "Get resource groups."
+      azure.azcollection.azure_rm_resourcegroup_info:
+        tags:
+          Deletable
+      register: resource_groups
+
+    - include_tasks: tasks/delete_rg.yml
+      loop: "{{ resource_groups.resourcegroups }}"
+      loop_control:
+        loop_var: resource_group
+      when:
+        - resource_group.tags.Deletable | bool
+        - resource_group.tags.LastUpdated is defined
+        - (ansible_date_time.date | to_datetime(date_fmt) - resource_group.tags.LastUpdated | to_datetime(date_fmt)).days > environment_days_to_preserve
