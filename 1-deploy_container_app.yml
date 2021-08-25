@@ -5,13 +5,13 @@
   gather_facts: true
   vars:
     resource_group_name: "test-resource-group"
-    app_service_name: "simple-ansiblefest2021-app-service"
-    app_service_plan_sku: "B1"
+    app_service_name: "simple-ansiblefest2021-app"
+    app_service_plan_sku: "S1"
     app_tags:
       LastUpdated: "{{ ansible_date_time.date }}"
       Deletable: "true"
     az_tenant_id: "override at runtime"
-    az_location: "southcentralus"
+    az_location: "eastus"
 
   tasks:
     - name: "Create resource group for application."
@@ -52,6 +52,33 @@
         location: "{{ az_location }}"
         append_tags: false
         tags: "{{ app_tags }}"
+
+    - name: "Create virtual network for webapp."
+      azure.azcollection.azure_rm_virtualnetwork:
+        name: "{{ app_service_name }}-vnet"
+        resource_group: "{{ resource_group_name }}"
+        address_prefixes_cidr:
+          - "10.1.0.0/27"
+        purge_address_prefixes: true
+        append_tags: false
+        tags: "{{ app_tags }}"
+
+    - name: "Create default subnet for virtual network."
+      azure.azcollection.azure_rm_subnet:
+        name: "default"
+        resource_group: "{{ resource_group_name }}"
+        virtual_network_name: "{{ app_service_name }}-vnet"
+        address_prefix_cidr: "10.1.0.0/28"
+        delegations:
+          - name: "Microsoft.Web/serverFarms"
+            serviceName: "Microsoft.Web/serverFarms"
+
+    - name: "Configure web app with virtual network."
+      azure.azcollection.azure_rm_webappvnetconnection:
+        name: "{{ app_service_name }}"
+        resource_group: "{{ resource_group_name }}"
+        vnet_name: "{{ app_service_name }}-vnet"
+        subnet: "default"
 
     - name: "Display new url."
       debug:

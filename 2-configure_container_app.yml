@@ -4,7 +4,7 @@
   connection: local
   gather_facts: false
   vars:
-    app_service_name: "simple-ansiblefest2021-app-service"
+    app_service_name: "simple-ansiblefest2021-app"
     resource_group_name: "test-resource-group"
 
   tasks:
