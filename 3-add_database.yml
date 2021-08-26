@@ -1,0 +1,82 @@
+---
+- name: "Playbook to add a SQL server database and peer its vnet with an app vnet."
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    resource_group_name: "test-resource-group"
+    app_service_name: "simple-ansiblefest2021-app"
+    database_password: "{{ lookup('password', '/dev/null length=25 chars=ascii_letters,digits,!#$%&*') }}"
+    app_tags:
+      LastUpdated: "{{ ansible_date_time.date }}"
+      Deletable: "true"
+
+  tasks:
+    - name: "Create SQL server."
+      azure.azcollection.azure_rm_sqlserver:
+        name: "{{ app_service_name }}-db"
+        admin_username: "ansible-admin"
+        admin_password: "{{ database_password }}"
+        resource_group: "{{ resource_group_name }}"
+        append_tags: false
+        tags: "{{ app_tags }}"
+
+    - name: "Create SQL database."
+      azure.azcollection.azure_rm_sqldatabase:
+        name: "TestDatabase"
+        resource_group: "{{ resource_group_name }}"
+        server_name: "{{ app_service_name }}-db"
+        sku:
+          capacity: 5
+          name: "Basic"
+          tier: "Basic"
+        append_tags: false
+        tags: "{{ app_tags }}"
+
+    - name: "Create virtual network for db."
+      azure.azcollection.azure_rm_virtualnetwork:
+        name: "{{ app_service_name }}-db-vnet"
+        resource_group: "{{ resource_group_name }}"
+        address_prefixes_cidr:
+          - "10.2.0.0/27"
+        purge_address_prefixes: true
+        append_tags: false
+        tags: "{{ app_tags }}"
+
+    - name: "Create default subnet for virtual network."
+      azure.azcollection.azure_rm_subnet:
+        name: "default"
+        resource_group: "{{ resource_group_name }}"
+        virtual_network_name: "{{ app_service_name }}-db-vnet"
+        address_prefix_cidr: "10.2.0.0/28"
+        service_endpoints:
+          - locations:
+              - "eastus"
+            service: "Microsoft.Sql"
+
+    - name: "Configure db with virtual network."
+      # yamllint disable rule:line-length
+      shell: az sql server vnet-rule create --name db-vnet --resource-group test-resource-group --server simple-ansiblefest2021-app-db --vnet-name simple-ansiblefest2021-app-db-vnet --subnet default
+      # yamllint enable rule:line-length
+      environment:
+        PATH: "/Users/ross/repos/ansiblefest2021/venv2/bin:{{ ansible_env.PATH }}"
+      tags:
+        - skip_ansible_lint
+
+    - name: "Peer app vnet -> db vnet."
+      azure.azcollection.azure_rm_virtualnetworkpeering:
+        resource_group: "{{ resource_group_name }}"
+        virtual_network: "{{ app_service_name }}-vnet"
+        name: "app-to-db-peer"
+        remote_virtual_network: "{{ app_service_name }}-db-vnet"
+        allow_forwarded_traffic: true
+        allow_virtual_network_access: true
+
+    - name: "Peer db vnet -> app vnet."
+      azure.azcollection.azure_rm_virtualnetworkpeering:
+        resource_group: "{{ resource_group_name }}"
+        virtual_network: "{{ app_service_name }}-db-vnet"
+        name: "db-to-app-peer"
+        remote_virtual_network: "{{ app_service_name }}-vnet"
+        allow_forwarded_traffic: true
+        allow_virtual_network_access: true

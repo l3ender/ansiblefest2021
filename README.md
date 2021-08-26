@@ -8,6 +8,7 @@ Plays can be run as follows:
 ```bash
 ansible-playbook 1-deploy_container_app.yml --e "az_tenant_id=$AZ_TENANT_ID"
 ansible-playbook 2-configure_container_app.yml
+ansible-playbook 3-add_database.yml
 ansible-playbook 4-delete_stale_environments.yml -v
 ```
 
